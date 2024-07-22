@@ -10,9 +10,9 @@ export function authRouter(router: Router) {
             body("name").notEmpty().withMessage("name is required"),
             body("email").isEmail().withMessage("Please provide a valid email"),
             body("password")
-                .isLength({ min: 4, max: 20 })
+                .isLength({ min: 6, max: 20 })
                 .withMessage(
-                    "Password must be between 4 and 20 characters long"
+                    "Password must be between 6 and 20 characters long"
                 )
                 .matches(
                     /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{4,20}$/
@@ -36,6 +36,10 @@ export function authRouter(router: Router) {
     );
     router.post(
         "/resend-otp",
+        [
+            body("email").isEmail().withMessage("Please provide a valid email"),
+        ],
+        validateRequest,  
         authController.resendOtp
     );
 
@@ -43,10 +47,29 @@ export function authRouter(router: Router) {
         "/signin",
         [
             body("email").isEmail().withMessage("Please provide a valid email"),
-            body("password").notEmpty().withMessage("Password is required"),
+            body("password")
+                .isLength({ min: 6, max: 20 })
+                .withMessage(
+                    "Password must be between 6 and 20 characters long"
+                )
+                .matches(
+                    /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{4,20}$/
+                )
+                .withMessage(
+                    "Password must contain at least one letter, one number, and one special character"
+                ),
         ],
         validateRequest,
         authController.signin
+    );
+
+    router.post(
+        "/google-auth",
+        [
+            body("token").notEmpty().withMessage("token can't be empty"),
+        ],
+        validateRequest,  
+        authController.googleSignin
     );
 
     router.post("/signout", validateRequest, authController.signout);

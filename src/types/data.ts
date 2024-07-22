@@ -2,7 +2,7 @@ export interface IUnverifiedUser{
     name:string,
     email:string,
     password:string,
-    otp:number
+    otp:string
 }
 
 export interface IUser{

@@ -21,7 +21,7 @@ class SendMail {
 
  
 
-    sendEmailVerification(name: string, email: string, verificationCode: number): Promise<{ success: boolean; }> {
+    sendEmailVerification(name: string, email: string, verificationCode: string): Promise<{ success: boolean; }> {
         return new Promise((resolve, reject) => {
             const mailOptions: nodemailer.SendMailOptions = {
                 from: process.env.SMTP_MAIL,
@@ -48,7 +48,7 @@ export const sendMail= new SendMail();
 
 
 
-export const generateVerificationHtml=(verificationCode:number,name:string)=>{
+export const generateVerificationHtml=(verificationCode:string,name:string)=>{
 
     const html=`
     <!DOCTYPE html>

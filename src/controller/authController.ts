@@ -1,3 +1,5 @@
+import axios from "axios";
+
 import { BadRequestError } from "../errors/bad-request-error";
 import { unverifiedUserRepository } from "../repository/unverifiedUserRepository";
 import { generateOTP } from "../services/generateOtp";
@@ -8,13 +10,11 @@ import { Req, Res } from "../types/expressTypes";
 import userRepository from "../repository/userRepository";
 import { jWTToken } from "../services/jwt";
 import { tokenOptions } from "../utils/tockenOptions";
+
 class AuthController {
     async signup(req: Req, res: Res) {
-        
-        
         const { name, email, password } = req.body as IUser;
-      
-        
+
         const exist = await userRepository.findByEmail(email);
 
         if (exist) {
@@ -39,6 +39,7 @@ class AuthController {
         await unverifiedUserRepository.storeUser(email, user);
 
         res.json({
+            data: { otpSentAt: Date.now() },
             success: true,
             message: "verification otp has been send to the mail",
         });
@@ -50,8 +51,9 @@ class AuthController {
         if (!checkUser) {
             throw new BadRequestError("session expired please signup");
         }
+
         if (otp !== checkUser.otp) {
-            throw new BadRequestError("invalid otp number");
+            throw new BadRequestError("invalid otp ");
         }
         const { name, password } = checkUser;
         const newUser = {
@@ -60,16 +62,19 @@ class AuthController {
             password,
         };
 
-        const unverifiedUserDeletePromise = unverifiedUserRepository.deleteUser(email);
-        const userPromise =  userRepository.createUser(newUser);
+        const unverifiedUserDeletePromise =
+            unverifiedUserRepository.deleteUser(email);
+        const userPromise = userRepository.createUser(newUser);
 
         await Promise.all([userPromise, unverifiedUserDeletePromise]);
         res.json({
             success: true,
             data: {
-                name,email
+                name,
+                email,
             },
-            message:"new account created successfully"
+            message:
+                "Account created, please login with your email and password",
         });
     }
 
@@ -86,10 +91,9 @@ class AuthController {
 
         const passwordMatch = await hash.comparePassword(
             password,
-            user.password,
+            user.password
         );
-        
-        
+
         if (!passwordMatch) {
             throw new BadRequestError("invalid email or password");
         }
@@ -107,6 +111,40 @@ class AuthController {
         });
     }
 
+    async googleSignin(req: Req, res: Res) {
+        const { token } = req.body as { token: string };
+
+        const GOOGLE_OAUTH_URL = process.env.GOOGLE_OAUTH_URL;
+        // Verify the token with Google
+        const googleResponse = await axios.get(`${GOOGLE_OAUTH_URL}?id_token=${token}`);
+
+        const { email } = googleResponse.data;
+
+        // Check if user  exists
+        const user = await userRepository.findByEmail(email);
+        if (!user) {
+            res.json({
+                success:false,
+                message:"Please create an account to login"
+            });
+            return;
+        }
+
+        // Create JWT
+        const jwtToken = jWTToken.createJWT(
+            { email },
+            process.env.JWT_KEY as string
+        );
+
+        res.cookie("jwt", jwtToken, tokenOptions);
+
+        res.json({
+            success: true,
+            data: { name: user.name, email }
+        });
+    
+    }
+
     async signout(req: Req, res: Res) {
         res.clearCookie("jwt");
         res.json({
@@ -117,6 +155,7 @@ class AuthController {
 
     async resendOtp(req: Req, res: Res) {
         const { email } = req.body;
+
         const checkUser = await unverifiedUserRepository.getUser(email);
         if (!checkUser) {
             throw new BadRequestError("session expired please signup");
@@ -125,16 +164,23 @@ class AuthController {
         const otp = generateOTP();
 
         // send mail
-        const sendMailPromise= sendMail.sendEmailVerification(checkUser.name, email, otp);
+        const sendMailPromise = sendMail.sendEmailVerification(
+            checkUser.name,
+            email,
+            otp
+        );
 
-        const deletePromise =unverifiedUserRepository.deleteUser(email);
-        const storeUserPromiser =unverifiedUserRepository.storeUser(email,checkUser);
+        const storeUserPromiser = unverifiedUserRepository.storeUser(email, {
+            ...checkUser,
+            otp,
+        });
 
-        await Promise.all([sendMailPromise, deletePromise,storeUserPromiser ]);
+        await Promise.all([sendMailPromise, storeUserPromiser]);
 
         res.json({
-            success:true,
-            message:"verification otp has been resend to the mail"
+            success: true,
+            message: "verification otp has been resend to the mail",
+            data: { otpSentAt: Date.now() },
         });
     }
 }
