@@ -8,9 +8,16 @@ let redisClient: Redis;
 
 
 function redisDB() {
-    const redisClientURL = () => {
+    const redisClientInfo = () => {
         if (process.env.REDIS_URL) {
-            return process.env.REDIS_URL;
+            return {
+                host: process.env.REDIS_HOST,
+                port:Number( process.env.REDISPORT),
+                password: process.env.REDIS_PASSWORD,
+                tls: process.env.REDIS_HOST !== "localhost" ? {
+                    rejectUnauthorized: false
+                } : undefined
+            };
         }
         throw new Error("Redis connection failed");
     };
@@ -20,8 +27,9 @@ function redisDB() {
         
         redisClient = redisMock.createClient() as unknown as Redis;
     } else {
+        
         // Use the actual Redis client
-        redisClient = new Redis(redisClientURL());
+        redisClient = new Redis(redisClientInfo());
     }
 
   

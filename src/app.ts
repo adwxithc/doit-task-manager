@@ -7,6 +7,7 @@ import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import { authRouter } from "./routes/authRouter";
 import { errorHandler } from "./middlewares/error-handler";
+import { taskListRouter } from "./routes/taskListRoter";
 
 
 dotenv.config();
@@ -34,6 +35,7 @@ app.use(cors(corsOptions));
 const httpServer = http.createServer(app);
 
 app.use("/api/auth",authRouter(express.Router()));
+app.use("/api/task",taskListRouter(express.Router()));
 
 
 app.use(errorHandler);

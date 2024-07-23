@@ -2,9 +2,9 @@ import { Router } from "express";
 import { body } from "express-validator";
 
 import { validateRequest } from "../middlewares/validateRequest";
-import {taskListController} from "../controller/TaskListController";
+import {taskListController} from "../controller/taskListController";
 
-export function authRouter(router: Router) {
+export function taskListRouter(router: Router) {
     router.post(
         "/create",
         [
